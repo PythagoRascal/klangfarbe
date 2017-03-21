@@ -1,2 +1,2 @@
 #!/bin/sh
-arecord -D plughw:1,0 -f dat -r 24000
+arecord -q --device=plughw:1,0 --format=dat --rate=24000 --buffer-size 2048

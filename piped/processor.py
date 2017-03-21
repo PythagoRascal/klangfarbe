@@ -1,5 +1,5 @@
 #!/usr/bin/python -u
-import sys, math
+import sys, math, colorsys
 import signal as sig
 from threading import Thread
 from datetime import datetime as dt
@@ -7,16 +7,27 @@ from scipy import fftpack, signal
 import numpy as np
 
 class Processor:
-    def __init__(self, size, channels, rate, bufferlen, interval):
+    def __init__(self,
+                 size = 2**12,
+                 channels = 1,
+                 rate = 48000,
+                 bufferlen = 50,
+                 interval = 0.1,
+                 preCutoff = 1,
+                 postCutoff = 0,
+                 outputSize = 360):
         self.SIZE = size
         self.CHANNELS = channels
         self.RATE = rate
         self.BUFFERLEN = bufferlen
         self.INTERVAL = interval
+        self.PRE_CUTOFF = preCutoff
+        self.POST_CUTOFF = postCutoff if postCutoff < 0 else None
+        self.OUTPUT_SIZE = outputSize
 
         self._isStarted = False
         self._waveDataBuffer = []
-        self._mapToPitch = lambda freq: math.log(freq / 440.0, 2)
+        self._mapFreqToPitch = lambda freq: math.log(freq / 440.0, 2)
 
     def start(self):
         if self._isStarted:
@@ -44,21 +55,25 @@ class Processor:
     def process(self):
         waveData = np.sum(np.array(self._waveDataBuffer), axis = 0) / self.BUFFERLEN
 
-        specData = np.abs(fftpack.rfft(waveData))
-        freqs = fftpack.rfftfreq(len(waveData)) * self.RATE
-
-        print freqs[0], freqs[-1], (freqs[-1] - freqs[0]), (freqs[-1] - freqs[0]) / 30.0
-
-        specData = specData[20:]
-        freqs = map(self._mapToPitch, freqs[20:])
+        specData = np.abs(fftpack.rfft(waveData))[self.PRE_CUTOFF : self.POST_CUTOFF]
+        freqs = (fftpack.rfftfreq(len(waveData)) * self.RATE)[self.PRE_CUTOFF : self.POST_CUTOFF]
+        freqs = np.array(map(self._mapFreqToPitch, freqs))
+        freqs = np.rint((freqs - min(freqs)) / (max(freqs) - min(freqs)) * (self.OUTPUT_SIZE - 1))
 
         summedSpecData = []
         uniqueFreqs = np.unique(freqs)
         for idx, freq in enumerate(uniqueFreqs):
             summedSpecData.append(specData[freqs == freq].sum())
 
-        freqs = uniqueFreqs
-        specData = np.array(summedSpecData) / (self.SIZE * self.RATE)
+        summedSpecData = np.rint(
+            (summedSpecData - min(summedSpecData))
+            / (max(summedSpecData) - min(summedSpecData))
+            * 255
+        )
+	
+	#print [x for x in summedSpecData]
+
+        sys.stdout.write(summedSpecData.astype(np.int8).tobytes())
 
     def stream(self):
         last = dt.now()
@@ -77,8 +92,19 @@ CHANNELS = 1
 RATE = 24000
 BUFFERLEN = 50
 INTERVAL = 0.1
+PRE_CUTOFF = 20
+POST_CUTOFF = -228
+OUTPUT_SIZE = 30
 
-processor = Processor(SIZE, CHANNELS, RATE, BUFFERLEN, INTERVAL)
+processor = Processor(
+    size = SIZE,
+    rate = RATE,
+    bufferlen = BUFFERLEN,
+    interval = INTERVAL,
+    preCutoff = PRE_CUTOFF,
+    postCutoff = POST_CUTOFF,
+    outputSize = OUTPUT_SIZE
+)
 processor.start()
 
 def sigterm_handler(signum, frame):
