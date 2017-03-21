@@ -9,10 +9,8 @@ class Processor:
 
         self._specData = []
         self._freqs = []
-
         self._isStarted = False
 
-        #self._mapToPitch = lambda freq: int(round(math.log(freq / 440.0, 2**(1 / 12.0))))
         self._mapToPitch = lambda freq: math.log(freq / 440.0, 2)
 
     def start(self):
