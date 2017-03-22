@@ -161,14 +161,17 @@ void RotateBuffer(int distance)
 	memset(&tx, 0x00, distance);
 }
 void PopulateRGBBuffer(char frame[]) {
+	cout << "COLORS: ";
 	for (int i = 0; i < NOF_LEDS; i++) {
 		int hue = i * (360.0 / NOF_LEDS);
 		double lightness = (int)(frame[i]) / 255.0;
 		RGB rgb = ConvertHSLToRGB(hue, 1, lightness);
+		cout << "[" << rgb.r << "," << rgb.g << "," << rgb.b << "],";
 		tx[(i * 3)] = rgb.r;
 		tx[(i * 3) + 1] = rgb.g;
 		tx[(i * 3) + 2] = rgb.b;
 	}
+	cout << ";" << endl;
 }
 
 void StartStreaming()
@@ -181,7 +184,9 @@ void StartStreaming()
 
 	while (1) {
 		cin.read(buffer, buffersize);
+		cout << "LIGHTS: ["; for (int i = 0; i < buffersize; i++) { cout << (int)buffer[i] << ", "; } cout << "]" << endl;
 		PopulateRGBBuffer(buffer);
+		cout << endl;
 		memset(&buffer, 0, sizeof buffer);
 		UpdateStrip();
 

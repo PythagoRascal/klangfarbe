@@ -1,0 +1,2 @@
+#!/bin/sh
+reset && ./recorder.sh | ./processor.py | ./display

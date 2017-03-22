@@ -74,6 +74,7 @@ class Processor:
 	#print [x for x in summedSpecData]
 
         sys.stdout.write(summedSpecData.astype(np.int8).tobytes())
+	#self.stop()
 
     def stream(self):
         last = dt.now()
